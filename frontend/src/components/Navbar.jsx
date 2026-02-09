@@ -1,160 +1,159 @@
-// src/components/Navbar.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Mic, Info, Search, Menu, X, ArrowRight, FileText, Bot, Home, Globe } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { pathname } = useLocation();
+  const { language, toggleLanguage, t } = useLanguage();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: t('home'), path: "/", icon: <Home size={18} /> },
+    { name: t('voiceComplaint'), path: "/voice-complaint", icon: <Mic size={18} /> },
+    { name: t('writtenComplaint'), path: "/complaint", icon: <FileText size={18} /> },
+    { name: t('chatbot'), path: "/chatbot", icon: <Bot size={18} /> },
+    { name: t('about'), path: "/about", icon: <Info size={18} /> },
+  ];
 
   return (
-    <nav className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white px-6 py-4 shadow-2xl border-b-4 border-emerald-400 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}></div>
-      </div>
+    <nav
+      className={`fixed w-full top-0 z-[100] transition-all duration-300 ${scrolled
+        ? 'bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm py-2'
+        : 'bg-transparent py-4'
+        }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
 
-      <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
-        {/* Left section: Logo + Brand */}
-        <a href="/" className="flex items-center space-x-4 cursor-pointer group">
-          {/* Logo */}
-          <div className="relative">
-            <div className="w-14 h-14 bg-gradient-to-br from-white to-emerald-100 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110">
-              <span className="text-3xl">🌱</span>
+          {/* Brand Logo */}
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary-DEFAULT blur-lg opacity-40 group-hover:opacity-60 transition-opacity rounded-full"></div>
+              <div className="relative w-10 h-10 bg-gradient-to-br from-primary-DEFAULT to-primary-dark rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform duration-300">
+                <Mic size={22} />
+              </div>
             </div>
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-2xl bg-emerald-400/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"></div>
-          </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900">
+              Janta<span className="text-primary-DEFAULT">Voice</span>
+            </span>
+          </Link>
 
-          {/* Brand Text */}
-          <div className="flex flex-col">
-                        <h1 className="text-3xl font-bold text-white tracking-tight group-hover:text-emerald-100 transition-colors duration-300">
-              EcoSarthi
-            </h1>
-            <p className="text-sm text-emerald-100 font-medium tracking-wide">
-              Your Environmental Companion
-            </p>
-          </div>
-        </a>
-
-        {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center space-x-2">
-          <div className="flex items-center space-x-1 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 shadow-lg">
-            <a
-              href="/pickup-scheduling"
-              className="px-6 py-3 rounded-xl text-sm font-semibold text-white/90 hover:text-white hover:bg-emerald-500/30 transition-all duration-300 border border-transparent hover:border-emerald-300/50 group"
-            >
-              <span className="flex items-center space-x-2">
-                <span className="text-lg group-hover:scale-110 transition-transform duration-300">♻️</span>
-                <span>Recycling Pickup</span>
-              </span>
-            </a>
-
-            <a
-              href="/eco-tips"
-              className="px-6 py-3 rounded-xl text-sm font-semibold text-white/90 hover:text-white hover:bg-emerald-500/30 transition-all duration-300 border border-transparent hover:border-emerald-300/50 group"
-            >
-              <span className="flex items-center space-x-2">
-                <span className="text-lg group-hover:scale-110 transition-transform duration-300">🌱</span>
-                <span>Eco Tips</span>
-              </span>
-            </a>
-
-                         <a
-               href="/about"
-               className="px-6 py-3 rounded-xl text-sm font-semibold text-white/90 hover:text-white hover:bg-emerald-500/30 transition-all duration-300 border border-transparent hover:border-emerald-300/50 group"
-             >
-               <span className="flex items-center space-x-2">
-                 <span className="text-lg group-hover:scale-110 transition-transform duration-300">ℹ️</span>
-                 <span>About EcoSarthi</span>
-               </span>
-             </a>
-
-
-          </div>
-
-          {/* Track Status Button */}
-          <div className="ml-4">
-            <a
-              href="/trackstatus"
-              className="bg-gradient-to-r from-orange-400 to-orange-600 
-                         hover:from-orange-500 hover:to-orange-700 
-                         px-6 py-3 rounded-xl text-sm font-semibold text-white 
-                         transition-all duration-300 shadow-lg 
-                         hover:shadow-orange-500/40 transform hover:scale-105 
-                         border border-orange-400 hover:border-orange-300 
-                         relative overflow-hidden group"
-            >
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r 
-                              from-transparent via-white/20 to-transparent 
-                              translate-x-[-100%] group-hover:translate-x-[100%] 
-                              transition-transform duration-700"></div>
-
-              <span className="flex items-center gap-2 relative z-10">
-                <span className="text-lg group-hover:rotate-12 transition-transform duration-300">🔍</span>
-                <span>Track Status</span>
-              </span>
-            </a>
-          </div>
-        </div>
-
-        {/* Mobile menu button */}
-        <div className="lg:hidden">
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="text-white p-3 rounded-2xl hover:bg-white/20 transition-all duration-300 border border-white/20 backdrop-blur-sm group"
-          >
-            <svg className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 bg-emerald-700/95 backdrop-blur-md border-t border-emerald-400/50 shadow-2xl z-50">
-          <div className="px-6 py-4 space-y-3">
-            <a
-              href="/pickup-scheduling"
-              className="block px-4 py-3 rounded-xl text-white hover:bg-emerald-600/50 transition-all duration-300 border border-transparent hover:border-emerald-300/50"
-            >
-              <span className="flex items-center space-x-2">
-                <span className="text-lg">♻️</span>
-                <span>Recycling Pickup</span>
-              </span>
-            </a>
-                         <a
-               href="/eco-tips"
-               className="block px-4 py-3 rounded-xl text-white hover:bg-emerald-600/50 transition-all duration-300 border border-transparent hover:border-emerald-300/50"
-             >
-               <span className="flex items-center space-x-2">
-                 <span className="text-lg">🌱</span>
-                 <span>Eco Tips</span>
-               </span>
-             </a>
-                           <a
-                href="/about"
-                className="block px-4 py-3 rounded-xl text-white hover:bg-emerald-600/50 transition-all duration-300 border border-transparent hover:border-emerald-300/50"
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1 bg-white/50 backdrop-blur-md px-2 py-1.5 rounded-full border border-white/40 shadow-sm">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="relative px-4 py-2 rounded-full text-sm font-medium transition-colors"
               >
-                <span className="flex items-center space-x-2">
-                  <span className="text-lg">ℹ️</span>
-                  <span>About EcoSarthi</span>
+                {pathname === link.path && (
+                  <motion.div
+                    layoutId="navbar-indicator"
+                    className="absolute inset-0 bg-white shadow-sm rounded-full"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className={`relative z-10 flex items-center gap-2 ${pathname === link.path ? 'text-primary-dark font-semibold' : 'text-slate-600 hover:text-slate-900'}`}>
+                  {link.icon}
+                  {link.name}
                 </span>
-              </a>
-            
-            <a
-              href="/trackstatus"
-              className="block px-4 py-3 rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition-all duration-300"
+              </Link>
+            ))}
+          </div>
+
+          <div className="hidden md:flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-white/50 hover:bg-white text-slate-700 border border-transparent hover:border-slate-200 transition-all shadow-sm"
             >
-              <span className="flex items-center space-x-2">
-                <span className="text-lg">🔍</span>
-                <span>Track Status</span>
-              </span>
-            </a>
+              <Globe size={16} />
+              {language === 'en' ? 'हिं' : 'EN'}
+            </button>
+            <Link
+              to="/trackstatus"
+              className="flex items-center space-x-2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all hover:bg-primary-dark hover:shadow-lg hover:-translate-y-0.5"
+            >
+              <Search size={16} />
+              <span>{t('trackStatus')}</span>
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="p-2 rounded-xl bg-slate-100 text-slate-700"
+            >
+              <Globe size={20} />
+            </button>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <motion.div
+                animate={isOpen ? "open" : "closed"}
+                variants={{
+                  open: { rotate: 180 },
+                  closed: { rotate: 0 }
+                }}
+              >
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </motion.div>
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Mobile Navigation */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden overflow-hidden bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-xl rounded-b-2xl absolute left-0 right-0 top-full"
+            >
+              <div className="p-4 space-y-2">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${pathname === link.path
+                      ? 'bg-primary-light/10 text-primary-dark font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {link.icon}
+                      <span>{link.name}</span>
+                    </div>
+                    {pathname === link.path && <ArrowRight size={16} className="text-primary-DEFAULT" />}
+                  </Link>
+                ))}
+                <Link
+                  to="/trackstatus"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center justify-center space-x-2 w-full p-3 mt-4 bg-slate-900 text-white rounded-xl font-bold"
+                >
+                  <Search size={18} />
+                  <span>{t('trackStatus')}</span>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </nav>
   );
 };

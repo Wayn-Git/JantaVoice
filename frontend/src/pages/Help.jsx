@@ -1,103 +1,45 @@
 import React from "react";
+import { Phone, Mail, ShieldAlert, HeartPulse, HardHat, Info } from 'lucide-react';
 
 export default function Help() {
   const contacts = [
-    {
-      name: "आपदा प्रबंधन विभाग (Disaster Management)",
-      phone: "1078",
-      email: "ndma@nic.in",
-    },
-    {
-      name: "महिला हेल्पलाइन (Women Helpline)",
-      phone: "1091 / 181",
-      email: "women-helpline@gov.in",
-    },
-    {
-      name: "बच्चों के लिए हेल्पलाइन (Childline)",
-      phone: "1098",
-      email: "childline@childlineindia.org.in",
-    },
-    {
-      name: "स्वास्थ्य और परिवार कल्याण मंत्रालय",
-      phone: "1800-180-1104",
-      email: "healthhelp@nic.in",
-    },
-    {
-      name: "उपभोक्ता हेल्पलाइन (Consumer Affairs)",
-      phone: "1800-11-4000 / 14404",
-      email: "consumeraffairs@gov.in",
-    },
-    {
-      name: "पुलिस सहायता (Police)",
-      phone: "100",
-      email: "police-support@gov.in",
-    },
-    {
-      name: "आग और बचाव सेवा (Fire & Rescue)",
-      phone: "101",
-      email: "firedept@gov.in",
-    },
-    {
-      name: "एम्बुलेंस सेवा (Ambulance)",
-      phone: "102 / 108",
-      email: "ambulance@gov.in",
-    },
-    {
-      name: "डिजिटल इंडिया हेल्पलाइन",
-      phone: "1800-111-555",
-      email: "digitalindia@meity.gov.in",
-    },
-    {
-      name: "रेलवे हेल्पलाइन (Railway)",
-      phone: "139",
-      email: "railhelp@indianrailways.gov.in",
-    },
-    {
-      name: "साइबर क्राइम हेल्पलाइन",
-      phone: "1930",
-      email: "cybercrime@gov.in",
-    },
-    {
-      name: "वरिष्ठ नागरिक हेल्पलाइन",
-      phone: "14567",
-      email: "seniorcitizen@gov.in",
-    },
-    {
-      name: "आयुष्मान भारत हेल्पलाइन",
-      phone: "14555 / 1800-111-565",
-      email: "pmjay@ndhm.gov.in",
-    },
+    { name: "आपदा प्रबंधन (Disaster Management)", phone: "1078", email: "ndma@nic.in", icon: <ShieldAlert className="text-red-500" /> },
+    { name: "महिला हेल्पलाइन (Women Helpline)", phone: "1091 / 181", email: "women-helpline@gov.in", icon: <Info className="text-pink-500" /> },
+    { name: "बच्चों के लिए हेल्पलाइन (Childline)", phone: "1098", email: "childlineindia.org.in", icon: <Info className="text-blue-400" /> },
+    { name: "स्वास्थ्य विभाग (Health)", phone: "1800-180-1104", email: "healthhelp@nic.in", icon: <HeartPulse className="text-red-600" /> },
+    { name: "पुलिस सहायता (Police)", phone: "100", email: "police-support@gov.in", icon: <ShieldAlert className="text-blue-700" /> },
+    { name: "साइबर क्राइम (Cyber Crime)", phone: "1930", email: "cybercrime@gov.in", icon: <ShieldAlert className="text-slate-700" /> },
+    { name: "वरिष्ठ नागरिक (Senior Citizen)", phone: "14567", email: "seniorcitizen@gov.in", icon: <Info className="text-indigo-500" /> },
+    { name: "रेलवे हेल्पलाइन (Railway)", phone: "139", email: "railhelp@rail.gov.in", icon: <HardHat className="text-orange-600" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-100 to-green-50 px-4 py-10">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-green-800 mb-4">मदद केंद्र (Help Center)</h1>
-        <p className="text-gray-700 text-base max-w-2xl mx-auto">
-          सभी सरकारी योजनाओं, आपातकालीन सेवाओं और आवश्यक संपर्क विवरण यहां दिए गए हैं। आप किसी भी सहायता के लिए नीचे दिए गए संपर्कों पर कॉल या ईमेल कर सकते हैं।
+    <div className="min-h-screen bg-white text-slate-900 py-24 px-6">
+      <div className="max-w-5xl mx-auto text-center mb-16">
+        <h1 className="text-5xl md:text-6xl font-black tracking-tighter mb-6">मदद केंद्र <br/><span className="text-blue-600 italic">Help Center</span></h1>
+        <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+          आपातकालीन स्थितियों में त्वरित सहायता के लिए आधिकारिक संपर्क।
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {contacts.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white border border-green-200 rounded-2xl shadow-md hover:shadow-lg transition duration-300 p-5"
-          >
-            <h2 className="text-xl font-semibold text-green-900 mb-3">{item.name}</h2>
-            <p className="text-gray-800 mb-1">
-              📞 <span className="font-medium">फोन:</span> {item.phone}
-            </p>
-            <p className="text-gray-800">
-              📧 <span className="font-medium">ईमेल:</span> {item.email}
-            </p>
+          <div key={index} className="bg-slate-50 border border-slate-100 rounded-[2rem] p-8 hover:shadow-xl hover:bg-white transition-all group">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-6 group-hover:scale-110 transition-transform">
+              {item.icon}
+            </div>
+            <h2 className="text-xl font-bold mb-4 leading-tight">{item.name}</h2>
+            <div className="space-y-2 text-sm">
+              <p className="flex items-center gap-2 text-blue-600 font-bold"><Phone size={14}/> {item.phone}</p>
+              <p className="flex items-center gap-2 text-slate-400 truncate"><Mail size={14}/> {item.email}</p>
+            </div>
           </div>
         ))}
       </div>
-
-      <div className="text-center mt-12 text-sm text-gray-600">
-        यदि कोई नंबर कार्य नहीं करता है, तो कृपया संबंधित विभाग की आधिकारिक वेबसाइट पर जाएं।
-      </div>
+      
+      <p className="mt-12 text-center text-slate-400 text-sm font-medium uppercase tracking-widest">
+        Official Government Directories • 2026
+      </p>
     </div>
   );
 }

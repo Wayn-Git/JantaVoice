@@ -1,25 +1,20 @@
-# from flask import Blueprint, jsonify
-# from voice_bot.jantavoice import start_conversation
-
-# voice_routes = Blueprint('voice_routes', __name__)
-
-# @voice_routes.route('/api/voice-complaint', methods=['GET'])
-# def handle_voice_complaint():
-#     try:
-#         final_result = start_conversation()
-#         return jsonify({"status": "success", "data": final_result})
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)})
-
-
-
+"""
+Voice Routes for JantaVoice
+Handles voice complaint submission with AI processing
+"""
 
 from flask import Blueprint, jsonify, request
 import logging
 import traceback
+import os
+import uuid
+from datetime import datetime
 
-# Import the improved voice bot
-from voice_bot.jantavoice import start_conversation
+# Import AI services
+from ai_services import transcribe_hindi_audio, extract_fields_from_complaint
+from fallback_storage import save_complaint_fallback
+from config import complaints_collection
+from utils.generate_id import generate_complaint_id, generate_token
 
 voice_routes = Blueprint('voice_routes', __name__)
 
@@ -27,383 +22,194 @@ voice_routes = Blueprint('voice_routes', __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Upload folder for audio files
+AUDIO_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'audios')
+os.makedirs(AUDIO_UPLOAD_FOLDER, exist_ok=True)
 
-@voice_routes.route('/api/voice-complaint', methods=['GET', 'POST'])
+ALLOWED_EXTENSIONS = {'wav', 'mp3', 'webm', 'ogg', 'm4a', 'flac'}
+
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def is_database_available():
+    """Check if MongoDB is available"""
+    return complaints_collection is not None
+
+
+@voice_routes.route('/api/complaint/voice', methods=['POST'])
 def handle_voice_complaint():
     """
-    Handle voice complaint requests
-    Supports both GET and POST methods for flexibility
+    Process voice complaint with AI pipeline
+    
+    Expects multipart/form-data with:
+    - audio: Audio file (wav, mp3, webm, etc.)
+    - name: (optional) Complainant name
+    - phone: (optional) Phone number
+    
+    Returns structured complaint data with transcript
     """
     try:
-        logger.info("Starting voice complaint process...")
+        logger.info("Voice complaint endpoint triggered")
         
-        # Start the conversation
-        final_result = start_conversation()
-        
-        if final_result:
-            logger.info(f"Voice complaint completed successfully: {final_result.get('complaint_id', 'Unknown')}")
+        # Check if audio file is present
+        if 'audio' not in request.files:
             return jsonify({
-                "status": "success", 
-                "message": "शिकायत सफलतापूर्वक दर्ज हो गई है",
-                "data": final_result,
-                "complaint_id": final_result.get('complaint_id', 'Unknown')
-            }), 200
-        else:
-            logger.warning("Voice complaint process returned None")
-            return jsonify({
-                "status": "error", 
-                "message": "शिकायत दर्ज करने में समस्या हुई"
+                "success": False,
+                "error": "No audio file provided"
             }), 400
-            
-    except Exception as e:
-        logger.error(f"Voice complaint error: {str(e)}")
-        logger.error(traceback.format_exc())
+        
+        audio_file = request.files['audio']
+        
+        if audio_file.filename == '':
+            return jsonify({
+                "success": False,
+                "error": "No file selected"
+            }), 400
+        
+        if not allowed_file(audio_file.filename):
+            return jsonify({
+                "success": False,
+                "error": f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            }), 400
+        
+        # Generate unique filename and save audio
+        file_ext = audio_file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+        audio_path = os.path.join(AUDIO_UPLOAD_FOLDER, unique_filename)
+        audio_file.save(audio_path)
+        logger.info(f"Audio saved: {audio_path}")
+        
+        # Step 1: Transcribe audio using OpenAI Whisper
+        logger.info("Starting transcription...")
+        transcription_result = transcribe_hindi_audio(audio_path)
+        
+        if not transcription_result.get("success"):
+            return jsonify({
+                "success": False,
+                "error": "Failed to transcribe audio",
+                "details": transcription_result.get("error")
+            }), 500
+        
+        transcript = transcription_result.get("transcript", "")
+        logger.info(f"Transcription complete: {transcript[:100]}...")
+        
+        # Step 2: Extract fields using OpenRouter LLM
+        logger.info("Extracting fields...")
+        extraction_result = extract_fields_from_complaint(transcript)
+        
+        if not extraction_result.get("success"):
+            logger.warning("Field extraction failed, using fallback")
+        
+        fields = extraction_result.get("fields", {})
+        
+        # Step 3: Create complaint document
+        complaint_id = generate_complaint_id()
+        token = generate_token()
+        
+        # Override with form data if provided
+        name = request.form.get('name') or fields.get('name', 'Unknown')
+        phone = request.form.get('phone') or fields.get('phone')
+        
+        complaint = {
+            "id": complaint_id,
+            "token": token,
+            "type": "voice",
+            "name": name,
+            "phone": phone,
+            "location": fields.get('location', 'Unknown'),
+            "department": fields.get('department', 'General Administration'),
+            "description": fields.get('description', transcript),
+            "urgency": fields.get('urgency', 'Medium'),
+            "transcript_hindi": transcript,
+            "audio_path": f"/audios/{unique_filename}",
+            "status": "Pending",
+            "timestamp": datetime.utcnow(),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        # Step 4: Save to database (with fallback)
+        saved_to_db = False
+        if is_database_available():
+            try:
+                complaints_collection.insert_one(complaint.copy())
+                saved_to_db = True
+                logger.info(f"Complaint saved to MongoDB: {complaint_id}")
+            except Exception as db_error:
+                logger.error(f"MongoDB save failed: {db_error}")
+                # Fall through to fallback
+        
+        if not saved_to_db:
+            # Save to fallback JSON storage
+            save_complaint_fallback(complaint)
+            logger.warning(f"Complaint saved to fallback storage: {complaint_id}")
+        
+        # Return success response
         return jsonify({
-            "status": "error", 
-            "message": f"तकनीकी समस्या: {str(e)}"
+            "success": True,
+            "complaint_id": complaint_id,
+            "token": token,
+            "transcript": transcript,
+            "extracted_fields": {
+                "name": name,
+                "phone": phone,
+                "location": fields.get('location'),
+                "department": fields.get('department'),
+                "description": fields.get('description'),
+                "urgency": fields.get('urgency')
+            },
+            "saved_to_database": saved_to_db,
+            "message": "शिकायत सफलतापूर्वक दर्ज हो गई है" if saved_to_db else "शिकायत सहेजी गई, डेटाबेस में बाद में sync होगी"
+        }), 201
+        
+    except Exception as e:
+        logger.exception(f"Voice complaint error: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "message": "तकनीकी समस्या हुई, कृपया पुनः प्रयास करें"
         }), 500
 
 
 @voice_routes.route('/api/voice-status', methods=['GET'])
 def voice_status():
-    """
-    Check if voice bot is ready and working
-    """
-    try:
-        return jsonify({
-            "status": "ready",
-            "message": "Voice bot is ready to accept complaints",
-            "version": "2.0"
-        }), 200
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+    """Check if voice bot is ready and working"""
+    return jsonify({
+        "status": "ready",
+        "message": "Voice complaint system is ready",
+        "version": "3.0",
+        "features": {
+            "speech_to_text": "OpenAI Whisper",
+            "field_extraction": "OpenRouter LLM",
+            "database": "MongoDB" if is_database_available() else "Fallback JSON"
+        }
+    }), 200
 
 
 @voice_routes.route('/api/voice-test', methods=['GET'])
 def voice_test():
-    """
-    Test endpoint for voice functionality
-    """
-    try:
-        # Import voice functions for testing
-        from voice_bot.voice_bot_hindi import speak_hindi
-        
-        test_message = "यह एक परीक्षण संदेश है"
-        speak_hindi(test_message)
-        
-        return jsonify({
-            "status": "success",
-            "message": "Voice test completed",
-            "test_message": test_message
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Voice test failed: {str(e)}"
-        }), 500
+    """Test endpoint for voice functionality"""
+    return jsonify({
+        "status": "success",
+        "message": "Voice API is operational",
+        "database_available": is_database_available()
+    }), 200
 
 
-
-        
-# from flask import Blueprint, jsonify, Response, session
-# import json
-# import threading
-# import time
-# from queue import Queue
-# import sys
-# import os
-# import datetime
-
-# # Add parent path for imports
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# # Import with error handling
-# try:
-#     from voice_bot.enhanced_jantavoice import start_conversation_with_updates
-#     from voice_bot.voice_bot_hindi import speak_hindi, listen_hindi
-#     from voice_bot.enhanced_gemini_ai import ask_gemini_followup_or_result, is_structured_json, determine_department
-#     from utils.generate_id import generate_complaint_id, generate_token
-#     from config import complaints_collection
-# except ImportError as e:
-#     print(f"Import error in voice_routes: {e}")
-#     # Create fallback functions
-#     def speak_hindi(text): print(f"Speaking: {text}")
-#     def listen_hindi(): return "मॉक इनपुट"
-#     def ask_gemini_followup_or_result(log): return "कृपया बताएं"
-#     def is_structured_json(text): return None
-#     def determine_department(complaint, location): return "सामान्य"
-#     def generate_complaint_id(): return f"VOICE{int(time.time())}"
-#     def generate_token(): return f"TOK{int(time.time())}"
-#     complaints_collection = None
-
-# voice_routes = Blueprint("voice_routes", __name__)
-
-# # Thread-safe session management
-# import threading
-# session_lock = threading.Lock()
-# active_sessions = {}
-
-# class VoiceSession:
-#     def __init__(self, session_id):
-#         self.session_id = session_id
-#         self.is_active = False
-#         self.conversation_log = ""
-#         self.message_queue = Queue()
-#         self.thread = None
-#         self.lock = threading.Lock()
-        
-#     def send_update(self, message_type, message, **kwargs):
-#         """Send real-time update to frontend"""
-#         try:
-#             data = {
-#                 'type': message_type,
-#                 'message': message,
-#                 'timestamp': datetime.datetime.now().isoformat(),
-#                 'session_id': self.session_id,
-#                 **kwargs
-#             }
-#             self.message_queue.put(data)
-#         except Exception as e:
-#             print(f"Error sending update: {e}")
-        
-#     def process_conversation(self):
-#         """Main conversation processing thread"""
-#         try:
-#             with self.lock:
-#                 self.is_active = True
-                
-#             self.send_update('bot_question', 'नमस्ते! जनतावॉइस में आपका स्वागत है। कृपया अपनी शिकायत बताएं।', step='greeting')
-            
-#             # Start conversation using enhanced handler
-#             try:
-#                 handler = start_conversation_with_updates(self.send_update)
-#             except Exception as e:
-#                 print(f"Error starting conversation handler: {e}")
-#                 self.send_update('error', f'वॉइस हैंडलर में समस्या: {str(e)}')
-#                 return
-            
-#         except Exception as e:
-#             print(f"Error in conversation: {e}")
-#             self.send_update('error', f'शिकायत प्रक्रिया में समस्या: {str(e)}')
-#         finally:
-#             with self.lock:
-#                 self.is_active = False
-            
-#     def submit_complaint(self, complaint_data):
-#         """Submit complaint to database"""
-#         try:
-#             if not complaints_collection:
-#                 print("Database not configured")
-#                 return None
-                
-#             complaint_id = generate_complaint_id()
-#             token = generate_token()
-            
-#             complaint = {
-#                 "id": complaint_id,
-#                 "token": token,
-#                 "type": "voice",
-#                 "name": complaint_data.get("शिकायतकर्ता का नाम", ""),
-#                 "location": complaint_data.get("स्थान", ""),
-#                 "department": complaint_data.get("विभाग", ""),
-#                 "description": complaint_data.get("शिकायत", ""),
-#                 "mobile": complaint_data.get("मोबाइल नंबर", ""),
-#                 "timestamp": datetime.datetime.utcnow(),
-#                 "status": "Pending",
-#                 "urgency": "normal"
-#             }
-            
-#             complaints_collection.insert_one(complaint)
-#             print(f"[Voice Complaint] ID: {complaint_id}, Token: {token}")
-#             return complaint_id
-            
-#         except Exception as e:
-#             print(f"Error submitting complaint: {e}")
-#             return None
-            
-#     def stop(self):
-#         """Stop the session"""
-#         with self.lock:
-#             self.is_active = False
-#         self.send_update('session_stopped', 'सेशन बंद किया गया')
-
-# @voice_routes.route("/api/start-voice-session", methods=["POST"])
-# def start_voice_session():
-#     """Start a new voice complaint session"""
-#     try:
-#         session_id = f"voice_{int(time.time())}_{threading.get_ident()}"
-        
-#         with session_lock:
-#             # Clean up old sessions
-#             to_remove = []
-#             for sid, vsession in active_sessions.items():
-#                 if not vsession.is_active:
-#                     to_remove.append(sid)
-            
-#             for sid in to_remove:
-#                 del active_sessions[sid]
-            
-#             # Create new session
-#             voice_session = VoiceSession(session_id)
-#             active_sessions[session_id] = voice_session
-        
-#         # Start conversation thread
-#         voice_session.thread = threading.Thread(target=voice_session.process_conversation)
-#         voice_session.thread.daemon = True
-#         voice_session.thread.start()
-        
-#         # Store session ID in Flask session
-#         session['voice_session_id'] = session_id
-        
-#         return jsonify({
-#             "success": True,
-#             "session_id": session_id,
-#             "message": "Voice session started"
-#         }), 200
-        
-#     except Exception as e:
-#         print(f"Error starting voice session: {e}")
-#         return jsonify({
-#             "success": False,
-#             "error": str(e)
-#         }), 500
-
-# @voice_routes.route("/api/stop-voice-session", methods=["POST"])
-# def stop_voice_session():
-#     """Stop current voice session"""
-#     try:
-#         session_id = session.get('voice_session_id')
-        
-#         if session_id:
-#             with session_lock:
-#                 if session_id in active_sessions:
-#                     active_sessions[session_id].stop()
-#                     del active_sessions[session_id]
-            
-#             # Clear from Flask session
-#             session.pop('voice_session_id', None)
-            
-#         return jsonify({
-#             "success": True,
-#             "message": "Voice session stopped"
-#         }), 200
-        
-#     except Exception as e:
-#         return jsonify({
-#             "success": False,
-#             "error": str(e)
-#         }), 500
-
-# @voice_routes.route("/api/voice-complaint-stream")
-# def voice_complaint_stream():
-#     """Server-Sent Events stream for real-time updates"""
-#     def generate():
-#         session_id = session.get('voice_session_id')
-        
-#         if not session_id:
-#             yield f"data: {json.dumps({'type': 'error', 'message': 'No session ID'})}\n\n"
-#             return
-            
-#         # Wait for session to be created
-#         max_wait = 5  # seconds
-#         waited = 0
-#         voice_session = None
-        
-#         while waited < max_wait:
-#             with session_lock:
-#                 voice_session = active_sessions.get(session_id)
-#             if voice_session:
-#                 break
-#             time.sleep(0.1)
-#             waited += 0.1
-            
-#         if not voice_session:
-#             yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
-#             return
-        
-#         try:
-#             # Send initial connection confirmation
-#             yield f"data: {json.dumps({'type': 'connected', 'session_id': session_id})}\n\n"
-            
-#             last_heartbeat = time.time()
-            
-#             while voice_session.is_active:
-#                 try:
-#                     # Try to get message from queue (timeout after 1 second)
-#                     message = voice_session.message_queue.get(timeout=1)
-#                     yield f"data: {json.dumps(message, ensure_ascii=False)}\n\n"
-#                     last_heartbeat = time.time()
-#                 except:
-#                     # Send heartbeat every 5 seconds to keep connection alive
-#                     if time.time() - last_heartbeat > 5:
-#                         yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
-#                         last_heartbeat = time.time()
-                        
-#         except Exception as e:
-#             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-#         finally:
-#             yield f"data: {json.dumps({'type': 'stream_ended'})}\n\n"
+# Legacy endpoint for backward compatibility
+@voice_routes.route('/api/voice-complaint', methods=['GET', 'POST'])
+def legacy_voice_complaint():
+    """Legacy endpoint - redirects to new API"""
+    if request.method == 'POST':
+        return handle_voice_complaint()
     
-#     return Response(
-#         generate(),
-#         mimetype='text/event-stream',
-#         headers={
-#             'Cache-Control': 'no-cache',
-#             'Connection': 'keep-alive',
-#             'Access-Control-Allow-Origin': '*',
-#             'Access-Control-Allow-Headers': 'Cache-Control'
-#         }
-#     )
-
-# @voice_routes.route("/api/voice-session-status", methods=["GET"])
-# def voice_session_status():
-#     """Get current voice session status"""
-#     try:
-#         session_id = session.get('voice_session_id')
-        
-#         if not session_id:
-#             return jsonify({
-#                 "success": False,
-#                 "message": "No active session"
-#             }), 200
-            
-#         with session_lock:
-#             voice_session = active_sessions.get(session_id)
-            
-#         if voice_session:
-#             return jsonify({
-#                 "success": True,
-#                 "session_id": session_id,
-#                 "is_active": voice_session.is_active,
-#                 "message": "Session found"
-#             }), 200
-#         else:
-#             return jsonify({
-#                 "success": False,
-#                 "message": "Session not found"
-#             }), 200
-            
-#     except Exception as e:
-#         return jsonify({
-#             "success": False,
-#             "error": str(e)
-#         }), 500
-
-# # Legacy route for backward compatibility
-# @voice_routes.route("/api/voice-complaint", methods=["GET"])
-# def voice_complaint():
-#     """Legacy endpoint - redirects to new system"""
-#     return jsonify({
-#         "status": "redirect",
-#         "message": "Please use the new real-time voice system",
-#         "endpoints": {
-#             "start": "/api/start-voice-session",
-#             "stream": "/api/voice-complaint-stream",
-#             "stop": "/api/stop-voice-session",
-#             "status": "/api/voice-session-status"
-#         }
-#     }), 200
+    return jsonify({
+        "status": "info",
+        "message": "Please use POST /api/complaint/voice with audio file",
+        "new_endpoint": "/api/complaint/voice",
+        "method": "POST",
+        "content_type": "multipart/form-data"
+    }), 200

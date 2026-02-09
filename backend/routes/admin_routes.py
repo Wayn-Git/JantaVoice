@@ -44,30 +44,30 @@ def get_all_complaints():
         if not session.get("admin_logged_in"):
             return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-        # Check if database is available
-        if not is_database_available():
-            logger.warning("Database not available - returning empty complaints list")
-            return jsonify({
-                "success": True,
-                "complaints": [],
-                "message": "Database not available - no complaints loaded"
-            }), 200
-
-        # Retrieve and sort all complaints
-        complaints = list(complaints_collection.find({}).sort("timestamp", -1))
+        complaints = []
         
-        # Convert ObjectId to string for JSON serialization
-        for complaint in complaints:
-            complaint["_id"] = str(complaint["_id"])
-
-            # Ensure lat/lng/location fields are always present in the response to prevent key errors on the frontend
-            complaint["latitude"] = complaint.get("latitude")
-            complaint["longitude"] = complaint.get("longitude")
-            complaint["location"] = complaint.get("location")
+        # Try MongoDB first
+        if is_database_available():
+            complaints = list(complaints_collection.find({}).sort("timestamp", -1))
+            
+            # Convert ObjectId to string for JSON serialization
+            for complaint in complaints:
+                complaint["_id"] = str(complaint["_id"])
+                complaint["latitude"] = complaint.get("latitude")
+                complaint["longitude"] = complaint.get("longitude")
+                complaint["location"] = complaint.get("location")
+        else:
+            # Fallback to JSON storage
+            logger.warning("Database not available - using fallback storage")
+            from fallback_storage import get_fallback_complaints
+            complaints = get_fallback_complaints()
+            # Sort by timestamp (descending)
+            complaints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
         return jsonify({
             "success": True,
-            "complaints": complaints
+            "complaints": complaints,
+            "source": "mongodb" if is_database_available() else "fallback"
         }), 200
     except Exception as e:
         logger.error(f"Error fetching complaints: {e}")
@@ -91,17 +91,28 @@ def update_status():
     if not complaint_id or not new_status:
         return jsonify({"success": False, "message": "Missing ID or status"}), 400
 
-    # Update the complaint status in the database
-    result = complaints_collection.update_one(
-        {"id": complaint_id},
-        {"$set": {"status": new_status}}
-    )
+    updated = False
+    
+    # Try MongoDB first
+    if is_database_available():
+        result = complaints_collection.update_one(
+            {"id": complaint_id},
+            {"$set": {"status": new_status}}
+        )
+        if result.modified_count == 1:
+            updated = True
+        else:
+            # Check if already has same status
+            exists = complaints_collection.find_one({"id": complaint_id})
+            if exists:
+                updated = True
+    
+    # Try fallback storage
+    if not updated:
+        from fallback_storage import fallback_storage
+        updated = fallback_storage.update_complaint_status(complaint_id, new_status)
 
-    if result.modified_count == 1:
+    if updated:
         return jsonify({"success": True, "message": f"Status updated to {new_status}."})
     else:
-        # Check if the complaint exists with the same status already
-        exists = complaints_collection.find_one({"id": complaint_id})
-        if exists:
-            return jsonify({"success": True, "message": "Status already set."})
-        return jsonify({"success": False, "message": "Complaint not found."})
+        return jsonify({"success": False, "message": "Complaint not found."}), 404

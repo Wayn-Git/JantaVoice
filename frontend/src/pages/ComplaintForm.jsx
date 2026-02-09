@@ -1,461 +1,415 @@
-// import React, { useState } from "react";
-// import axios from "axios";
-// import PlacesAutocomplete, { geocodeByAddress, getLatLng } from "react-places-autocomplete";
-
-// export default function ComplaintForm() {
-//   const [formData, setFormData] = useState({
-//     name: "",
-//     complaint: "",
-//     location: "",
-//     urgency: "normal",
-//     department: "",
-//   });
-
-//   const [photo, setPhoto] = useState(null);
-//   const [complaintId, setComplaintId] = useState(null);
-//   const [submitted, setSubmitted] = useState(false);
-
-//   const handleChange = (e) => {
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-//   };
-
-//   // location select handler
-//   const handleSelect = async (address) => {
-//     setFormData({ ...formData, location: address });
-//     try {
-//       const results = await geocodeByAddress(address);
-//       const latLng = await getLatLng(results[0]);
-//       console.log("Coordinates: ", latLng); // agar latitude/longitude bhi chahiye backend ke liye
-//     } catch (error) {
-//       console.error("Error fetching coordinates", error);
-//     }
-//   };
-
-//   const handlePhotoChange = (e) => {
-//     if (e.target.files && e.target.files[0]) {
-//       setPhoto(e.target.files[0]);
-//     }
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     try {
-//       const formDataToSend = new FormData();
-//       Object.keys(formData).forEach((key) => {
-//         formDataToSend.append(key, formData[key]);
-//       });
-//       if (photo) {
-//         formDataToSend.append("photo", photo);
-//       }
-
-//       const res = await axios.post("http://localhost:5000/api/complaint", formDataToSend, {
-//         headers: { "Content-Type": "multipart/form-data" },
-//       });
-
-//       setComplaintId(res.data.complaint.complaintId);
-//       setSubmitted(true);
-
-//       setFormData({
-//         name: "",
-//         complaint: "",
-//         location: "",
-//         urgency: "normal",
-//         department: "",
-//       });
-//       setPhoto(null);
-//     } catch (err) {
-//       console.error("Submission failed:", err.message);
-//       alert("Complaint submission failed. Try again.");
-//     }
-//   };
-
-//   return (
-//     <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
-//       <h2 className="text-2xl font-semibold mb-4">Complaint Form</h2>
-//       <form onSubmit={handleSubmit} className="space-y-4">
-//         <input
-//           name="name"
-//           value={formData.name}
-//           onChange={handleChange}
-//           placeholder="Your Name"
-//           required
-//           className="w-full border px-3 py-2 rounded"
-//         />
-//         <textarea
-//           name="complaint"
-//           value={formData.complaint}
-//           onChange={handleChange}
-//           placeholder="Describe your complaint"
-//           required
-//           className="w-full border px-3 py-2 rounded"
-//         />
-
-//         {/* Location Autocomplete */}
-//         <PlacesAutocomplete
-//           value={formData.location}
-//           onChange={(address) => setFormData({ ...formData, location: address })}
-//           onSelect={handleSelect}
-//           searchOptions={{ componentRestrictions: { country: ["in"] } }} // restrict to India
-//         >
-//           {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
-//             <div>
-//               <input
-//                 {...getInputProps({
-//                   placeholder: "Search Location (India only)",
-//                   className: "w-full border px-3 py-2 rounded",
-//                 })}
-//               />
-//               <div className="border rounded bg-white mt-1">
-//                 {loading && <div className="p-2 text-gray-500">Loading...</div>}
-//                 {suggestions.map((suggestion) => {
-//                   const className = suggestion.active
-//                     ? "p-2 bg-blue-100 cursor-pointer"
-//                     : "p-2 cursor-pointer";
-//                   return (
-//                     <div
-//                       {...getSuggestionItemProps(suggestion, { className })}
-//                       key={suggestion.placeId}
-//                     >
-//                       {suggestion.description}
-//                     </div>
-//                   );
-//                 })}
-//               </div>
-//             </div>
-//           )}
-//         </PlacesAutocomplete>
-
-//         {/* Department */}
-//         <select
-//           name="department"
-//           value={formData.department}
-//           onChange={handleChange}
-//           className="w-full border px-3 py-2 rounded"
-//           required
-//         >
-//           <option value="">Select a Department</option>
-//           <option value="Public Works">Public Works</option>
-//           <option value="Water Supply">Water Supply</option>
-//           <option value="Sanitation">Sanitation</option>
-//           <option value="Electricity">Electricity</option>
-//           <option value="Other">Other</option>
-//         </select>
-
-//         {/* Urgency */}
-//         <select
-//           name="urgency"
-//           value={formData.urgency}
-//           onChange={handleChange}
-//           className="w-full border px-3 py-2 rounded"
-//         >
-//           <option value="normal">Normal</option>
-//           <option value="urgent">Urgent</option>
-//         </select>
-
-//         {/* Photo Upload */}
-//         <div>
-//           <label className="block text-sm font-medium text-gray-700 mb-1">
-//             Upload / Capture Photo
-//           </label>
-//           <input
-//             type="file"
-//             accept="image/*"
-//             capture="environment"
-//             onChange={handlePhotoChange}
-//             className="w-full border px-3 py-2 rounded"
-//           />
-//           {photo && (
-//             <p className="text-xs text-gray-500 mt-1">Selected: {photo.name}</p>
-//           )}
-//         </div>
-
-//         <button
-//           type="submit"
-//           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-//         >
-//           Submit
-//         </button>
-//       </form>
-
-//       {submitted && (
-//         <div className="mt-6 text-green-700 font-semibold">
-//           Complaint submitted successfully!<br />
-//           Your Complaint ID: <span className="font-bold">{complaintId}</span>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
 import React, { useState } from "react";
+import { Camera, MapPin, Loader2, CheckCircle, AlertCircle, Building2, User, FileText, AlertTriangle } from "lucide-react";
 import axios from "axios";
-import PlacesAutocomplete, {
-  geocodeByAddress,
-  getLatLng,
-} from "react-places-autocomplete";
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ComplaintForm() {
+  const { t } = useLanguage();
+  const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [complaintId, setComplaintId] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Form data
   const [formData, setFormData] = useState({
     name: "",
-    complaint: "",
     location: "",
-    urgency: "normal",
     department: "",
+    urgency: "Medium",
+    description: "",
+    photo: null
   });
 
-  const [photo, setPhoto] = useState(null);
-  const [complaintId, setComplaintId] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [liveCoords, setLiveCoords] = useState(null);
+  const departments = [
+    { id: "Road Department", label: t('roadDept'), icon: "🛣️" },
+    { id: "Water Department", label: t('waterDept'), icon: "💧" },
+    { id: "Sanitation Department", label: t('sanitationDept'), icon: "🗑️" },
+    { id: "Electricity Department", label: t('electricityDept'), icon: "⚡" },
+    { id: "Health Department", label: t('healthDept'), icon: "🏥" },
+    { id: "General Administration", label: t('generalComplaint'), icon: "🏛️" }
+  ];
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const urgencyLevels = [
+    { id: "Low", label: t('low'), color: "bg-green-500" },
+    { id: "Medium", label: t('medium'), color: "bg-yellow-500" },
+    { id: "High", label: t('high'), color: "bg-red-500" }
+  ];
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+            );
+            const data = await response.json();
+            const address = data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            handleInputChange("location", address);
+          } catch {
+            handleInputChange("location", `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          }
+        },
+        () => {
+          setError("Could not get location. Please enter manually.");
+        }
+      );
+    }
   };
 
   const handlePhotoChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setPhoto(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      handleInputChange("photo", file);
     }
   };
 
-  // Google Places Autocomplete handler
-  const handleSelect = async (address) => {
-    setFormData({ ...formData, location: address });
-    setLiveCoords(null); // Clear live coords if user selects an address
-    try {
-      const results = await geocodeByAddress(address);
-      const latLng = await getLatLng(results[0]);
-      console.log("Selected Location Coordinates: ", latLng);
-      // You can store these coords in state if your backend needs them
-    } catch (error) {
-      console.error("Error fetching coordinates", error);
+  const validateStep = () => {
+    if (step === 1 && !formData.department) {
+      setError("Please select a department");
+      return false;
+    }
+    if (step === 2) {
+      if (!formData.name.trim()) {
+        setError("Please enter your name");
+        return false;
+      }
+      if (!formData.location.trim()) {
+        setError("Please enter location");
+        return false;
+      }
+      if (!formData.description.trim()) {
+        setError("Please describe the issue");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) {
+      setStep(step + 1);
+      setError(null);
     }
   };
 
-  // Live location button handler
-  const handleLiveLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
 
     setIsSubmitting(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setLiveCoords({ latitude, longitude });
-        setFormData({ ...formData, location: "Live Location Captured" });
-        alert("Live location successfully captured!");
-        setIsSubmitting(false);
-      },
-      (error) => {
-        console.warn("Geolocation error:", error);
-        alert("⚠ Location not available. Please enable GPS for accurate location.");
-        setLiveCoords(null);
-        setIsSubmitting(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+    setError(null);
 
     try {
-      const formDataToSend = new FormData();
-      Object.keys(formData).forEach((key) => {
-        formDataToSend.append(key, formData[key]);
-      });
+      const submitData = new FormData();
+      submitData.append("name", formData.name);
+      submitData.append("location", formData.location);
+      submitData.append("department", formData.department);
+      submitData.append("urgency", formData.urgency);
+      submitData.append("description", formData.description);
 
-      if (photo) {
-        formDataToSend.append("photo", photo);
+      if (formData.photo) {
+        submitData.append("photo", formData.photo);
       }
 
-      // Logic to determine which location to send
-      let latLng = null;
-      if (liveCoords) {
-        // Option 1: Live location is captured
-        latLng = liveCoords;
-      } else if (formData.location) {
-        // Option 2: User typed and selected a location
-        const results = await geocodeByAddress(formData.location);
-        latLng = await getLatLng(results[0]);
-      }
-
-      if (latLng) {
-        formDataToSend.append("latitude", latLng.latitude);
-        formDataToSend.append("longitude", latLng.longitude);
-      }
-
-      const res = await axios.post("http://localhost:5000/api/complaint", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await axios.post("/api/complaint", submitData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      setComplaintId(res.data.complaint.complaintId);
-      setSubmitted(true);
-      alert(`Complaint submitted successfully! Your Complaint ID is: ${res.data.complaint.complaintId}`);
-
-      // Reset form
-      setFormData({
-        name: "",
-        complaint: "",
-        location: "",
-        urgency: "normal",
-        department: "",
-      });
-      setPhoto(null);
-      setLiveCoords(null);
+      if (response.data.success) {
+        setComplaintId(response.data.complaintId);
+        setSubmitted(true);
+      } else {
+        setError(response.data.message || "Submission failed");
+      }
     } catch (err) {
-      console.error("Submission failed:", err.message);
-      alert("Complaint submission failed. Please try again.");
+      console.error("Submit error:", err);
+      setError(err.response?.data?.message || "Technical error. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h2 className="text-2xl font-semibold mb-4">Complaint Form</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Input fields */}
-        <input
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Your Name"
-          required
-          className="w-full border px-3 py-2 rounded"
-        />
-        <textarea
-          name="complaint"
-          value={formData.complaint}
-          onChange={handleChange}
-          placeholder="Describe your complaint"
-          required
-          className="w-full border px-3 py-2 rounded"
-        />
-
-        {/* Location Section */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Location
-          </label>
-          <div className="flex gap-2">
-            <PlacesAutocomplete
-              value={formData.location}
-              onChange={(address) => {
-                setFormData({ ...formData, location: address });
-                setLiveCoords(null);
-              }}
-              onSelect={handleSelect}
-              searchOptions={{ componentRestrictions: { country: ["in"] } }}
-            >
-              {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
-                <div className="w-full">
-                  <input
-                    {...getInputProps({
-                      placeholder: "Search Location...",
-                      className: "w-full border px-3 py-2 rounded",
-                    })}
-                  />
-                  <div className="border rounded bg-white mt-1">
-                    {loading && <div className="p-2 text-gray-500">Loading...</div>}
-                    {suggestions.map((suggestion) => {
-                      const className = suggestion.active
-                        ? "p-2 bg-blue-100 cursor-pointer"
-                        : "p-2 cursor-pointer";
-                      return (
-                        <div
-                          {...getSuggestionItemProps(suggestion, { className })}
-                          key={suggestion.placeId}
-                        >
-                          {suggestion.description}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </PlacesAutocomplete>
-            <button
-              type="button"
-              onClick={handleLiveLocation}
-              disabled={isSubmitting}
-              className={`px-4 py-2 rounded text-sm text-white ${
-                isSubmitting ? "bg-gray-400" : "bg-blue-600"
-              }`}
-            >
-              Live
-            </button>
+  // Success screen
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl p-10 shadow-xl max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          {liveCoords && (
-            <p className="text-xs text-green-600 mt-1">
-              Live Location: {liveCoords.latitude.toFixed(4)}, {liveCoords.longitude.toFixed(4)}
-            </p>
+          <h2 className="text-2xl font-bold text-green-800 mb-2">
+            {t('complaintSuccess')}
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {t('complaintSentTo')} {formData.department}
+          </p>
+          <div className="bg-green-50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-500">{t('complaintId')}</p>
+            <p className="text-2xl font-mono font-bold text-green-700">{complaintId}</p>
+          </div>
+          <button
+            onClick={() => {
+              setSubmitted(false);
+              setStep(1);
+              setFormData({
+                name: "",
+                location: "",
+                department: "",
+                urgency: "Medium",
+                description: "",
+                photo: null
+              });
+            }}
+            className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+          >
+            {t('fileNewComplaint')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-20 px-4">
+      <div className="max-w-xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            📝 {t('fileComplaint')}
+          </h1>
+          <p className="text-gray-600">
+            {t('complaintSubtitle')}
+          </p>
+        </div>
+
+        {/* Progress */}
+        <div className="flex gap-2 mb-8">
+          {[1, 2, 3].map(i => (
+            <div
+              key={i}
+              className={`h-2 flex-1 rounded-full transition-colors ${step >= i ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+            />
+          ))}
+        </div>
+
+        {/* Step Labels */}
+        <div className="flex justify-between text-xs text-gray-500 mb-6 px-2">
+          <span className={step >= 1 ? 'text-blue-600 font-semibold' : ''}>{t('selectDept')}</span>
+          <span className={step >= 2 ? 'text-blue-600 font-semibold' : ''}>{t('fillDetails')}</span>
+          <span className={step >= 3 ? 'text-blue-600 font-semibold' : ''}>{t('confirm')}</span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl p-6 shadow-lg">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700">
+              <AlertCircle className="w-5 h-5" />
+              {error}
+            </div>
           )}
-        </div>
 
-        {/* Other form elements */}
-        <select
-          name="department"
-          value={formData.department}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-          required
-        >
-          <option value="">Select a Department</option>
-          <option value="Public Works">Public Works</option>
-          <option value="Water Supply">Water Supply</option>
-          <option value="Sanitation">Sanitation</option>
-          <option value="Electricity">Electricity</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <select
-          name="urgency"
-          value={formData.urgency}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="normal">Normal</option>
-          <option value="urgent">Urgent</option>
-        </select>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Upload / Capture Photo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoChange}
-            className="w-full border px-3 py-2 rounded"
-          />
-          {photo && (
-            <p className="text-xs text-gray-500 mt-1">Selected: {photo.name}</p>
+          {/* Step 1: Department Selection */}
+          {step === 1 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                {t('selectDept')}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {departments.map(dept => (
+                  <button
+                    key={dept.id}
+                    onClick={() => handleInputChange("department", dept.id)}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${formData.department === dept.id
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                  >
+                    <span className="text-2xl">{dept.icon}</span>
+                    <p className="font-medium mt-1">{dept.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-        </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full ${
-            isSubmitting ? "bg-gray-400" : "bg-blue-600"
-          } text-white px-4 py-2 rounded hover:bg-blue-700`}
-        >
-          {isSubmitting ? "Submitting..." : "Submit Complaint"}
-        </button>
-      </form>
+          {/* Step 2: Details */}
+          {step === 2 && (
+            <div className="space-y-5">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <User className="w-4 h-4 inline mr-1" />
+                  {t('yourName')} *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder={t('namePlaceholder')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-      {submitted && (
-        <div className="mt-6 text-green-700 font-semibold">
-          Complaint submitted successfully!<br />
-          Your Complaint ID: <span className="font-bold">{complaintId}</span>
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  {t('location')} *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    placeholder={t('locationPlaceholder')}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={getLocation}
+                    className="px-4 py-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors"
+                  >
+                    <MapPin className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FileText className="w-4 h-4 inline mr-1" />
+                  {t('issueDescription')} *
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  placeholder={t('descPlaceholder')}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+
+              {/* Urgency */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  {t('urgencyLevel')}
+                </label>
+                <div className="flex gap-3">
+                  {urgencyLevels.map(level => (
+                    <button
+                      key={level.id}
+                      onClick={() => handleInputChange("urgency", level.id)}
+                      className={`flex-1 py-3 rounded-xl font-medium transition-all ${formData.urgency === level.id
+                          ? `${level.color} text-white`
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      {level.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Camera className="w-4 h-4 inline mr-1" />
+                  {t('photo')}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="w-full p-3 border border-dashed border-gray-300 rounded-xl"
+                />
+                {formData.photo && (
+                  <p className="text-sm text-green-600 mt-2">✓ {formData.photo.name}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirmation */}
+          {step === 3 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">📋 {t('confirm')}</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('department')}:</span>
+                  <span className="font-medium">{formData.department}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('yourName')}:</span>
+                  <span className="font-medium">{formData.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('location')}:</span>
+                  <span className="font-medium text-right max-w-[200px] truncate">{formData.location}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('urgencyLevel')}:</span>
+                  <span className={`px-2 py-0.5 rounded text-white text-sm ${formData.urgency === 'High' ? 'bg-red-500' :
+                      formData.urgency === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}>{formData.urgency}</span>
+                </div>
+                <div className="pt-2 border-t">
+                  <span className="text-gray-600 text-sm">{t('description')}:</span>
+                  <p className="mt-1 text-gray-800">{formData.description}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between mt-6 pt-4 border-t">
+            {step > 1 ? (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="px-6 py-3 text-gray-600 font-medium hover:text-gray-800"
+              >
+                ← {t('back')}
+              </button>
+            ) : (
+              <div />
+            )}
+
+            {step < 3 ? (
+              <button
+                onClick={handleNext}
+                className="px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+              >
+                {t('next')} →
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t('submitting')}
+                  </>
+                ) : (
+                  <>{t('submitComplaint')} ✓</>
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -114,23 +114,32 @@ def submit_complaint():
                 "status": "Pending"
             }
 
-        # Check if database is available
-        if not is_database_available():
-            logger.warning("Database not available - complaint not saved")
-            return jsonify({
-                "success": True,
-                "complaintId": complaint_id,
-                "token": token,
-                "message": "Complaint processed but not saved (database unavailable)"
-            }), 201
-
-        inserted = complaints_collection.insert_one(complaint)
+        # Try to save to database, fallback to JSON if unavailable
+        if is_database_available():
+            inserted = complaints_collection.insert_one(complaint)
+            logger.info(f"Complaint saved to MongoDB: {complaint_id}")
+        else:
+            # Use fallback storage when MongoDB is unavailable
+            from fallback_storage import save_complaint_fallback
+            # Convert datetime to string for JSON serialization
+            complaint_copy = complaint.copy()
+            if isinstance(complaint_copy.get("timestamp"), datetime.datetime):
+                complaint_copy["timestamp"] = complaint_copy["timestamp"].isoformat()
+            saved = save_complaint_fallback(complaint_copy)
+            if not saved:
+                logger.error(f"Failed to save complaint to fallback storage: {complaint_id}")
+                return jsonify({
+                    "success": False,
+                    "message": "Failed to save complaint"
+                }), 500
+            logger.info(f"Complaint saved to fallback storage: {complaint_id}")
         
         # We'll return the complaint ID and a token for client-side use
+        response_token = str(inserted.inserted_id) if is_database_available() else token
         return jsonify({
             "success": True,
             "complaintId": complaint_id,
-            "token": str(inserted.inserted_id)
+            "token": response_token
         }), 201
 
     except Exception as e:
@@ -220,7 +229,7 @@ def submit_women_child_complaint():
         return jsonify({
             "success": True,
             "complaintId": complaint_id,
-            "token": str(inserted.inserted_id)
+            "token": str(inserted.inserted_id) if is_database_available() else token
         }), 201
 
     except Exception as e:
@@ -259,23 +268,41 @@ def update_complaint_status():
 
 # ------------------ Get Complaint Status ------------------
 @complaint_routes.route("/api/complaint/<complaint_id>", methods=["GET"])
+@complaint_routes.route("/api/complaint/status/<complaint_id>", methods=["GET"])
 def get_complaint_status(complaint_id):
     """
     Retrieves a single complaint by its ID.
+    Falls back to JSON storage if MongoDB is unavailable.
     """
     try:
-        complaint = complaints_collection.find_one({"id": complaint_id})
+        complaint = None
+        
+        # Try MongoDB first
+        if is_database_available():
+            complaint = complaints_collection.find_one({"id": complaint_id})
+            if complaint:
+                complaint.pop('_id', None)
+                complaint.pop('token', None)
+        
+        # Fallback to JSON storage
+        if complaint is None:
+            from fallback_storage import fallback_storage
+            complaint = fallback_storage.get_complaint_by_id(complaint_id)
+        
         if not complaint:
             return jsonify({"success": False, "message": "Complaint not found"}), 404
 
-        # Clean up the object before returning
-        complaint.pop('_id', None)
-        complaint.pop('token', None) # Don't expose the internal token
+        # Format timestamp if present
+        timestamp = complaint.get("timestamp")
+        if timestamp and hasattr(timestamp, 'isoformat'):
+            timestamp = timestamp.isoformat()
+        elif isinstance(timestamp, str):
+            timestamp = timestamp
 
         return jsonify({
             "success": True,
             "complaint": {
-                "complaintId": complaint.get("id"),
+                "id": complaint.get("id"),
                 "name": complaint.get("name"),
                 "location": complaint.get("location"),
                 "latitude": complaint.get("latitude"),
@@ -284,10 +311,12 @@ def get_complaint_status(complaint_id):
                 "urgency": complaint.get("urgency"),
                 "description": complaint.get("description"),
                 "status": complaint.get("status"),
+                "timestamp": timestamp,
                 "photoUrl": complaint.get("photoUrl"),
                 "voice_path": complaint.get("voice_path")
             }
         }), 200
 
     except Exception as e:
+        logger.exception(f"Error fetching complaint: {e}")
         return jsonify({"success": False, "message": "Failed to fetch complaint", "error": str(e)}), 500

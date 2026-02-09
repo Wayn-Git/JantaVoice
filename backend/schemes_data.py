@@ -1,114 +1,114 @@
 # backend/schemes_data.py
 
 SCHEMES = {
-    "प्रधानमंत्री जन धन योजना": {
+    "Pradhan Mantri Jan Dhan Yojana": {
         "link": "https://pmjdy.gov.in",
-        "eligibility": "भारतीय नागरिक जिनके पास बैंक खाता नहीं है।",
-        "benefits": "रुपये कार्ड, बीमा कवर और डायरेक्ट बेनिफिट ट्रांसफर।",
+        "eligibility": "Indian citizens who do not have a bank account.",
+        "benefits": "RuPay card, insurance cover, and Direct Benefit Transfer.",
         "steps": [
-            "नज़दीकी बैंक शाखा में जाएं।",
-            "जन धन खाता खोलने का फॉर्म भरें।",
-            "पहचान और पते का प्रमाण जमा करें।",
-            "बैंक द्वारा खाता खोलने की पुष्टि प्राप्त करें।"
+            "Visit the nearest bank branch.",
+            "Fill out the Jan Dhan account opening form.",
+            "Submit proof of identity and address.",
+            "Receive confirmation of account opening from the bank."
         ]
     },
-    "प्रधानमंत्री आवास योजना": {
+    "Pradhan Mantri Awas Yojana": {
         "link": "https://pmaymis.gov.in",
-        "eligibility": "EWS/LIG/MIG के परिवार।",
-        "benefits": "घर बनाने या खरीदने पर सब्सिडी।",
+        "eligibility": "Families belonging to EWS/LIG/MIG categories.",
+        "benefits": "Subsidy on building or purchasing a house.",
         "steps": [
-            "PMAY वेबसाइट पर जाएं।",
-            "‘Citizen Assessment’ पर क्लिक करें।",
-            "आधार नंबर डालकर फॉर्म भरें।",
-            "फॉर्म सबमिट करें और आवेदन आईडी नोट करें।"
+            "Visit the PMAY website.",
+            "Click on 'Citizen Assessment'.",
+            "Enter Aadhaar number and fill the form.",
+            "Submit the form and note down the application ID."
         ]
     },
-    "प्रधानमंत्री उज्ज्वला योजना": {
+    "Pradhan Mantri Ujjwala Yojana": {
         "link": "https://pmuy.gov.in",
-        "eligibility": "BPL परिवार की महिलाएं।",
-        "benefits": "फ्री LPG कनेक्शन।",
+        "eligibility": "Women from BPL families.",
+        "benefits": "Free LPG connection.",
         "steps": [
-            "नज़दीकी LPG डिस्ट्रीब्यूटर से संपर्क करें।",
-            "आवेदन फॉर्म भरें।",
-            "आधार, राशन कार्ड और पहचान पत्र जमा करें।",
-            "स्वीकृति मिलने पर LPG कनेक्शन प्राप्त करें।"
+            "Contact the nearest LPG distributor.",
+            "Fill out the application form.",
+            "Submit Aadhaar, Ration Card, and ID proof.",
+            "Receive LPG connection upon approval."
         ]
     },
-    "प्रधानमंत्री किसान सम्मान निधि योजना": {
+    "Pradhan Mantri Kisan Samman Nidhi": {
         "link": "https://pmkisan.gov.in",
-        "eligibility": "सभी छोटे और सीमांत किसान।",
-        "benefits": "₹6000 वार्षिक 3 किस्तों में।",
+        "eligibility": "All small and marginal farmers.",
+        "benefits": "₹6000 annually in 3 installments.",
         "steps": [
-            "PM-Kisan वेबसाइट पर जाएं।",
-            "‘Farmer Corner’ से पंजीकरण करें।",
-            "आधार और बैंक विवरण भरें।",
-            "जांच के बाद पैसे सीधे खाते में आएंगे।"
+            "Visit the PM-Kisan website.",
+            "Register under 'Farmer Corner'.",
+            "Fill in Aadhaar and bank details.",
+            "Money will be transferred directly to the account after verification."
         ]
     },
-    "आयुष्मान भारत योजना": {
+    "Ayushman Bharat Yojana": {
         "link": "https://pmjay.gov.in",
-        "eligibility": "गरीबी रेखा से नीचे के परिवार।",
-        "benefits": "₹5 लाख तक मुफ्त इलाज।",
+        "eligibility": "Families below the poverty line.",
+        "benefits": "Free treatment up to ₹5 lakhs.",
         "steps": [
-            "आधिकारिक PM-JAY पोर्टल पर जाएं।",
-            "‘Am I Eligible’ सेक्शन में आधार डालें।",
-            "योग्यता मिलने पर गोल्ड कार्ड प्राप्त करें।",
-            "अस्पताल में मुफ्त इलाज कराएं।"
+            "Visit the official PM-JAY portal.",
+            "Enter Aadhaar in the 'Am I Eligible' section.",
+            "Get the Gold Card if eligible.",
+            "Avail free treatment at empanelled hospitals."
         ]
     },
-    "प्रधानमंत्री फसल बीमा योजना": {
+    "Pradhan Mantri Fasal Bima Yojana": {
         "link": "https://pmfby.gov.in",
-        "eligibility": "सभी किसान जिनके पास फसल है।",
-        "benefits": "फसल खराब होने पर बीमा राशि।",
+        "eligibility": "All farmers growing notified crops.",
+        "benefits": "Insurance coverage for crop failure.",
         "steps": [
-            "PMFBY पोर्टल या CSC पर जाएं।",
-            "फसल और खेत का विवरण भरें।",
-            "प्रिमियम जमा करें।",
-            "बीमा पॉलिसी प्राप्त करें।"
+            "Visit the PMFBY portal or CSC.",
+            "Fill in crop and land details.",
+            "Pay the premium.",
+            "Receive the insurance policy."
         ]
     },
-    "सुकन्या समृद्धि योजना": {
+    "Sukanya Samriddhi Yojana": {
         "link": "https://www.nsiindia.gov.in",
-        "eligibility": "10 साल से कम उम्र की लड़कियों के लिए।",
-        "benefits": "बचत पर उच्च ब्याज और टैक्स छूट।",
+        "eligibility": "Girl children below 10 years of age.",
+        "benefits": "High interest on savings and tax exemptions.",
         "steps": [
-            "नज़दीकी डाकघर या बैंक जाएं।",
-            "SSY खाता खोलने का फॉर्म भरें।",
-            "जन्म प्रमाण पत्र और पहचान जमा करें।",
-            "खाता सक्रिय कराएं।"
+            "Visit the nearest Post Office or Bank.",
+            "Fill out the SSY account opening form.",
+            "Submit birth certificate and ID proof.",
+            "Activate the account."
         ]
     },
-    "अटल पेंशन योजना": {
+    "Atal Pension Yojana": {
         "link": "https://npscra.nsdl.co.in",
-        "eligibility": "18-40 वर्ष के नागरिक।",
-        "benefits": "₹1000 से ₹5000 तक मासिक पेंशन।",
+        "eligibility": "Citizens aged 18-40 years.",
+        "benefits": "Monthly pension from ₹1000 to ₹5000.",
         "steps": [
-            "बैंक या डाकघर जाएं।",
-            "APY फॉर्म भरें।",
-            "आधार और बैंक खाता जोड़ें।",
-            "ऑटो-डेबिट सक्रिय करें।"
+            "Visit a bank or post office.",
+            "Fill out the APY form.",
+            "Link Aadhaar and bank account.",
+            "Activate auto-debit."
         ]
     },
-    "स्टैंड अप इंडिया योजना": {
+    "Stand Up India Scheme": {
         "link": "https://www.standupmitra.in",
-        "eligibility": "SC/ST और महिला उद्यमी।",
-        "benefits": "₹10 लाख से ₹1 करोड़ तक का लोन।",
+        "eligibility": "SC/ST and women entrepreneurs.",
+        "benefits": "Bank loans between ₹10 lakh and ₹1 crore.",
         "steps": [
-            "Stand Up India पोर्टल पर जाएं।",
-            "ऑनलाइन आवेदन करें।",
-            "आवश्यक दस्तावेज़ अपलोड करें।",
-            "बैंक द्वारा स्वीकृति मिलने पर लोन प्राप्त करें।"
+            "Visit the Stand Up India portal.",
+            "Apply online.",
+            "Upload necessary documents.",
+            "Receive loan upon bank approval."
         ]
     },
-    "डिजिटल इंडिया जन सुविधा": {
+    "Digital India Services": {
         "link": "https://www.digitalindia.gov.in",
-        "eligibility": "सभी भारतीय नागरिक।",
-        "benefits": "सरकारी सेवाओं की ऑनलाइन सुविधा।",
+        "eligibility": "All Indian citizens.",
+        "benefits": "Online access to government services.",
         "steps": [
-            "Digital India पोर्टल पर जाएं।",
-            "अपनी ज़रूरत की सेवा चुनें।",
-            "आधार/OTP से सत्यापन करें।",
-            "सेवा का लाभ ऑनलाइन प्राप्त करें।"
+            "Visit the Digital India portal.",
+            "Choose the service you need.",
+            "Verify using Aadhaar/OTP.",
+            "Avail the service online."
         ]
     }
 }

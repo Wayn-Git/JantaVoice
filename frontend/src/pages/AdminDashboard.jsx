@@ -7,6 +7,11 @@ import MonthlyTrend from "./MonthlyTrend";
 import TopCities from "./TopCities";
 import PickupManagement from "../components/PickupManagement";
 
+// Configure axios defaults for this component
+const api = axios.create({
+  withCredentials: true
+});
+
 const toNumberOrNull = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -44,7 +49,7 @@ const AdminDashboard = () => {
   const fetchComplaints = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/admin/complaints");
+      const res = await api.get("/api/admin/complaints");
       const data = res.data;
       if (data.success) {
         setComplaints(data.complaints);
@@ -53,6 +58,10 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       console.error("Error fetching complaints:", err);
+      if (err.response?.status === 401) {
+        // Redirect to login if session expired
+        window.location.href = '/admin-login';
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +71,7 @@ const AdminDashboard = () => {
     fetchComplaints(); // Pehli baar data fetch karein jab component load ho
 
     const intervalId = setInterval(() => {
-        fetchComplaints(); // Har 10 second mein naya data fetch karein
+      fetchComplaints(); // Har 10 second mein naya data fetch karein
     }, 10000); // 10000 milliseconds = 10 seconds
 
     return () => clearInterval(intervalId);
@@ -110,7 +119,7 @@ const AdminDashboard = () => {
             return complaintDate >= weekAgo;
           case "This Month":
             return complaintDate.getMonth() === now.getMonth() &&
-                   complaintDate.getFullYear() === now.getFullYear();
+              complaintDate.getFullYear() === now.getFullYear();
           default:
             return true;
         }
@@ -122,9 +131,9 @@ const AdminDashboard = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      const res = await axios.post("/api/admin/update_status", { id, status: newStatus });
+      const res = await api.post("/api/admin/update_status", { id, status: newStatus });
       const data = res.data;
-      
+
       if (data.success) {
         setComplaints(prev =>
           prev.map(c => (c.id === id ? { ...c, status: newStatus } : c))
@@ -134,6 +143,10 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       console.error("Error updating status:", err);
+      if (err.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        window.location.href = '/admin-login';
+      }
     }
   };
 
@@ -293,22 +306,20 @@ const AdminDashboard = () => {
           <nav className="flex space-x-2">
             <button
               onClick={() => setActiveTab("complaints")}
-              className={`py-3 px-6 rounded-xl font-medium text-sm transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === "complaints"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
-                  : "text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
-              }`}
+              className={`py-3 px-6 rounded-xl font-medium text-sm transition-all duration-300 flex items-center space-x-2 ${activeTab === "complaints"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                : "text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
+                }`}
             >
               <span>♻️</span>
               <span>Environmental Services</span>
             </button>
             <button
               onClick={() => setActiveTab("pickup")}
-              className={`py-3 px-6 rounded-xl font-medium text-sm transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === "pickup"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
-                  : "text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
-              }`}
+              className={`py-3 px-6 rounded-xl font-medium text-sm transition-all duration-300 flex items-center space-x-2 ${activeTab === "pickup"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                : "text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
+                }`}
             >
               <span>📦</span>
               <span>Pickup Management</span>
@@ -322,328 +333,153 @@ const AdminDashboard = () => {
         <>
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Building className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building className="w-6 h-6 text-blue-600" />
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.pending}</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Processing</p>
+                  <p className="text-2xl font-bold text-yellow-600">{stats.processing}</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 text-yellow-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Resolved</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <User className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Today</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.today}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">This Week</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.thisWeek}</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Pickup Statistics Card */}
+            <div
+              className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setActiveTab("pickup")}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pickup Requests</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    <span className="text-sm">View in</span><br />
+                    <span className="text-lg">Pickup Tab</span>
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Package className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-red-600">{stats.pending}</p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-        </div>
+          {/* Filters */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search complaints..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Processing</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.processing}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="All">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Processing">Processing</option>
+                <option value="Resolved">Resolved</option>
+              </select>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Resolved</p>
-              <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <User className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
+              {/* Department Filter */}
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="All">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Today</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.today}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">This Week</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.thisWeek}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-6 h-6 text-purple-600" />
+              {/* Date Filter */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="All">All Time</option>
+                <option value="Today">Today</option>
+                <option value="This Week">This Week</option>
+                <option value="This Month">This Month</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Pickup Statistics Card */}
-        <div 
-          className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setActiveTab("pickup")}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pickup Requests</p>
-              <p className="text-2xl font-bold text-green-600">
-                <span className="text-sm">View in</span><br />
-                <span className="text-lg">Pickup Tab</span>
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search complaints..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="All">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Processing">Processing</option>
-            <option value="Resolved">Resolved</option>
-          </select>
-
-          {/* Department Filter */}
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="All">All Departments</option>
-            {departments.map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select>
-
-          {/* Date Filter */}
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="All">All Time</option>
-            <option value="Today">Today</option>
-            <option value="This Week">This Week</option>
-            <option value="This Month">This Month</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Complaint Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location & Department
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status & Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center">
-                    <div className="flex justify-center items-center">
-                      <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
-                      <span className="ml-2 text-gray-500">Loading...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredComplaints.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                    No complaints found matching your filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredComplaints
-                  .filter(c => c.status !== "Resolved") // Only show active complaints
-                  .map((complaint) => {
-                  const ll = normalizeLatLng(complaint.latitude, complaint.longitude);
-                  return (
-                    <tr key={complaint.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <User className="w-5 h-5 text-blue-600" />
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {complaint.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              ID: {complaint.id}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-2 break-words leading-relaxed max-h-20 overflow-y-auto">
-                              {complaint.description}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <p className="text-gray-900 flex items-center">
-                            <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                            {complaint.location}
-                          </p>
-                          {ll.lat !== null && ll.lng !== null && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Lat: {ll.lat.toFixed(5)}, Lng: {ll.lng.toFixed(5)}
-                            </p>
-                          )}
-                          <p className="text-gray-500 flex items-center mt-1">
-                            <Building className="w-4 h-4 mr-1 text-gray-400" />
-                            {complaint.department || "Unknown"}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col space-y-2">
-                          <select
-                            value={complaint.status}
-                            onChange={(e) => handleStatusChange(complaint.id, e.target.value)}
-                            className={`text-xs px-2 py-1 rounded-full border font-medium ${getStatusColor(complaint.status)}`}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Resolved">Resolved</option>
-                          </select>
-                          {complaint.urgency && (
-                            <div className={`flex items-center text-xs px-2 py-1 rounded-full ${getUrgencyColor(complaint.urgency)}`}>
-                              {getPriorityIcon(complaint.urgency)}
-                              <span className="ml-1">{complaint.urgency}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="flex flex-col">
-                          <span>{new Date(complaint.timestamp).toLocaleDateString()}</span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(complaint.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => viewComplaint(complaint)}
-                          className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Showing results count */}
-      <div className="mt-4 text-sm text-gray-500 text-center">
-        Showing {filteredComplaints.length} of {complaints.length} complaints
-      </div>
-
-      {/* Analytics Graphs Section */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">Analytics Dashboard</h3>
-        
-        {/* First Row - 2 Graphs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <h4 className="text-lg font-medium text-gray-700 mb-4">Cases by Department</h4>
-            <CasesByDepartment complaints={complaints} />
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <h4 className="text-lg font-medium text-gray-700 mb-4">Cases by City</h4>
-            <CasesByCity complaints={complaints} />
-          </div>
-        </div>
-        
-        {/* Second Row - 2 Graphs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <h4 className="text-lg font-medium text-gray-700 mb-4">Monthly Trend</h4>
-            <MonthlyTrend complaints={complaints} />
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <h4 className="text-lg font-medium text-gray-700 mb-4">Top Cities</h4>
-            <TopCities complaints={complaints} />
-          </div>
-        </div>
-      </div>
-
-      {/* History Section for Resolved Complaints */}
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-gray-800">Resolved Complaints History</h3>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {showHistory ? "Hide History" : "Show History"}
-            <Clock className="w-4 h-4 ml-2" />
-          </button>
-        </div>
-        
-        {showHistory && (
-          <div className="bg-white rounded-xl shadow-lg border overflow-hidden">
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -655,7 +491,10 @@ const AdminDashboard = () => {
                       Location & Department
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Resolution Date
+                      Status & Priority
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Timestamp
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -663,75 +502,247 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {complaints
-                    .filter(c => c.status === "Resolved")
-                    .map((complaint) => {
-                      const ll = normalizeLatLng(complaint.latitude, complaint.longitude);
-                      return (
-                        <tr key={complaint.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                  <User className="w-5 h-5 text-green-600" />
+                  {loading ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center">
+                        <div className="flex justify-center items-center">
+                          <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                          <span className="ml-2 text-gray-500">Loading...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredComplaints.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                        No complaints found matching your filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredComplaints
+                      .filter(c => c.status !== "Resolved") // Only show active complaints
+                      .map((complaint) => {
+                        const ll = normalizeLatLng(complaint.latitude, complaint.longitude);
+                        return (
+                          <tr key={complaint.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {complaint.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    ID: {complaint.id}
+                                  </p>
+                                  <p className="text-sm text-gray-600 mt-2 break-words leading-relaxed max-h-20 overflow-y-auto">
+                                    {complaint.description}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {complaint.name}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm">
+                                <p className="text-gray-900 flex items-center">
+                                  <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+                                  {complaint.location}
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                  ID: {complaint.id}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-2 break-words leading-relaxed max-h-20 overflow-y-auto">
-                                  {complaint.description}
+                                {ll.lat !== null && ll.lng !== null && (
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    Lat: {ll.lat.toFixed(5)}, Lng: {ll.lng.toFixed(5)}
+                                  </p>
+                                )}
+                                <p className="text-gray-500 flex items-center mt-1">
+                                  <Building className="w-4 h-4 mr-1 text-gray-400" />
+                                  {complaint.department || "Unknown"}
                                 </p>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm">
-                              <p className="text-gray-900 flex items-center">
-                                <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                                {complaint.location}
-                              </p>
-                              <p className="text-gray-500 flex items-center mt-1">
-                                <Building className="w-4 h-4 mr-1 text-gray-400" />
-                                {complaint.department || "Unknown"}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            <div className="flex flex-col">
-                              <span>{new Date(complaint.timestamp).toLocaleDateString()}</span>
-                              <span className="text-xs text-gray-400">
-                                {new Date(complaint.timestamp).toLocaleTimeString()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => viewComplaint(complaint)}
-                              className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col space-y-2">
+                                <select
+                                  value={complaint.status}
+                                  onChange={(e) => handleStatusChange(complaint.id, e.target.value)}
+                                  className={`text-xs px-2 py-1 rounded-full border font-medium ${getStatusColor(complaint.status)}`}
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Processing">Processing</option>
+                                  <option value="Resolved">Resolved</option>
+                                </select>
+                                {complaint.urgency && (
+                                  <div className={`flex items-center text-xs px-2 py-1 rounded-full ${getUrgencyColor(complaint.urgency)}`}>
+                                    {getPriorityIcon(complaint.urgency)}
+                                    <span className="ml-1">{complaint.urgency}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              <div className="flex flex-col">
+                                <span>{new Date(complaint.timestamp).toLocaleDateString()}</span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(complaint.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => viewComplaint(complaint)}
+                                className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
                 </tbody>
               </table>
             </div>
-            {complaints.filter(c => c.status === "Resolved").length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No resolved complaints found in history.
+          </div>
+
+          {/* Showing results count */}
+          <div className="mt-4 text-sm text-gray-500 text-center">
+            Showing {filteredComplaints.length} of {complaints.length} complaints
+          </div>
+
+          {/* Analytics Graphs Section */}
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 text-center">Analytics Dashboard</h3>
+
+            {/* First Row - 2 Graphs */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg border">
+                <h4 className="text-lg font-medium text-gray-700 mb-4">Cases by Department</h4>
+                <CasesByDepartment complaints={complaints} />
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-lg border">
+                <h4 className="text-lg font-medium text-gray-700 mb-4">Cases by City</h4>
+                <CasesByCity complaints={complaints} />
+              </div>
+            </div>
+
+            {/* Second Row - 2 Graphs */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg border">
+                <h4 className="text-lg font-medium text-gray-700 mb-4">Monthly Trend</h4>
+                <MonthlyTrend complaints={complaints} />
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-lg border">
+                <h4 className="text-lg font-medium text-gray-700 mb-4">Top Cities</h4>
+                <TopCities complaints={complaints} />
+              </div>
+            </div>
+          </div>
+
+          {/* History Section for Resolved Complaints */}
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-800">Resolved Complaints History</h3>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {showHistory ? "Hide History" : "Show History"}
+                <Clock className="w-4 h-4 ml-2" />
+              </button>
+            </div>
+
+            {showHistory && (
+              <div className="bg-white rounded-xl shadow-lg border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Complaint Details
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Location & Department
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Resolution Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {complaints
+                        .filter(c => c.status === "Resolved")
+                        .map((complaint) => {
+                          const ll = normalizeLatLng(complaint.latitude, complaint.longitude);
+                          return (
+                            <tr key={complaint.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-start space-x-3">
+                                  <div className="flex-shrink-0">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <User className="w-5 h-5 text-green-600" />
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {complaint.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      ID: {complaint.id}
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-2 break-words leading-relaxed max-h-20 overflow-y-auto">
+                                      {complaint.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm">
+                                  <p className="text-gray-900 flex items-center">
+                                    <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+                                    {complaint.location}
+                                  </p>
+                                  <p className="text-gray-500 flex items-center mt-1">
+                                    <Building className="w-4 h-4 mr-1 text-gray-400" />
+                                    {complaint.department || "Unknown"}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-500">
+                                <div className="flex flex-col">
+                                  <span>{new Date(complaint.timestamp).toLocaleDateString()}</span>
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(complaint.timestamp).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => viewComplaint(complaint)}
+                                  className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+                {complaints.filter(c => c.status === "Resolved").length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No resolved complaints found in history.
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
         </>
       )}
 
@@ -754,7 +765,7 @@ const AdminDashboard = () => {
                   ×
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -861,7 +872,7 @@ const AdminDashboard = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description
@@ -870,21 +881,21 @@ const AdminDashboard = () => {
                     {selectedComplaint.description || "No description provided"}
                   </div>
                 </div>
-                
-                <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Photo
-               </label>
-               {selectedComplaint.photoUrl ? (
-              <img src={`http://localhost:5000${selectedComplaint.photoUrl}`} 
 
-              alt="Complaint"
-              className="w-full max-h-64 object-contain rounded border"
-              />
-              ) : (
-             <p className="text-sm text-gray-500">No photo uploaded</p>
-              )}
-             </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Photo
+                  </label>
+                  {selectedComplaint.photoUrl ? (
+                    <img src={`http://localhost:5000${selectedComplaint.photoUrl}`}
+
+                      alt="Complaint"
+                      className="w-full max-h-64 object-contain rounded border"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">No photo uploaded</p>
+                  )}
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

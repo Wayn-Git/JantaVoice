@@ -5,8 +5,12 @@ import os
 import time
 from datetime import datetime
 
-# HuggingFace
-from transformers import pipeline
+# HuggingFace (optional - used as fallback when OpenRouter fails)
+try:
+    from transformers import pipeline
+    HF_AVAILABLE = True
+except ImportError:
+    HF_AVAILABLE = False
 
 # Routes
 from routes.complaint_routes import complaint_routes
@@ -14,8 +18,13 @@ from routes.admin_routes import admin_routes
 from routes.voice_routes import voice_routes
 from routes.pickup_routes import pickup_routes
 
-# Voice Bot
-from voice_bot.enhanced_jantavoice import start_conversation
+# Voice Bot (optional - legacy support)
+try:
+    from voice_bot.enhanced_jantavoice import start_conversation
+    VOICE_BOT_AVAILABLE = True
+except ImportError:
+    VOICE_BOT_AVAILABLE = False
+    start_conversation = None
 
 # ✅ Import schemes
 from schemes_data import SCHEMES  
@@ -43,7 +52,7 @@ app.register_blueprint(admin_routes)
 app.register_blueprint(voice_routes)
 app.register_blueprint(pickup_routes)                     
 
-# ---------------- HuggingFace Model ----------------
+# ---------------- HuggingFace Model (Optional Fallback) ----------------
 HF_MODEL_NAME = os.environ.get("HF_MODEL_NAME", "bigscience/bloom-560m")
 
 GEN_MAX_LENGTH = int(os.environ.get("GEN_MAX_LENGTH", "256"))
@@ -52,23 +61,23 @@ GEN_TOP_P = float(os.environ.get("GEN_TOP_P", "0.95"))
 GEN_DO_SAMPLE = os.environ.get("GEN_DO_SAMPLE", "true").lower() == "true"
 
 chatbot = None
-try:
-    logger.info(f"Loading Hugging Face model: {HF_MODEL_NAME}")
-    chatbot = pipeline("text-generation", model=HF_MODEL_NAME)
-    logger.info("✅ Chatbot model loaded successfully.")
-except Exception as e:
-    logger.exception(f"❌ Failed to load Hugging Face model: {e}")
-    chatbot = None 
+if HF_AVAILABLE:
+    try:
+        logger.info(f"Loading Hugging Face model: {HF_MODEL_NAME} (optional fallback)")
+        chatbot = pipeline("text-generation", model=HF_MODEL_NAME)
+        logger.info("✅ Chatbot model loaded successfully (as fallback).")
+    except Exception as e:
+        logger.warning(f"⚠️ HuggingFace model not loaded (OpenRouter will be primary): {e}")
+        chatbot = None 
 
 # ---------------- Helpers ----------------
 def _build_prompt(user_text: str) -> str:
     return (
-        "आप एक सहायक हैं जो भारत सरकार की योजनाओं की जानकारी"
-        " बहुत ही सरल हिंदी में गरीब लोगों को समझाते हैं।\n\n"
-        f"सवाल: {user_text.strip()}\n\n"
-        "उत्तर आसान, छोटे बिंदुओं में, और स्पष्ट हिंदी में दें।\n"
-        "अगर योजना का नाम, पात्रता, आवेदन प्रक्रिया और लाभ बता सकें तो शामिल करें।\n\n"
-        "उत्तर:\n"
+        "You are a helpful assistant that explains Indian Government Schemes in simple English.\n\n"
+        f"Question: {user_text.strip()}\n\n"
+        "Answer in simple, bullet points, and clear English.\n"
+        "If possible, include the Scheme Name, Eligibility, Application Process, and Benefits.\n\n"
+        "Answer:\n"
     )
 
 def _postprocess_generated(user_prompt: str, generated_text: str) -> str:
@@ -81,7 +90,7 @@ def _postprocess_generated(user_prompt: str, generated_text: str) -> str:
 
 def find_scheme_info(user_text: str):
     for scheme_name, data in SCHEMES.items():
-        if scheme_name in user_text:
+        if scheme_name.lower() in user_text.lower():
             return scheme_name, data
     return None, None
 
@@ -101,9 +110,6 @@ def health_check():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
-        if chatbot is None:
-            return jsonify({"reply": "Chatbot model not loaded."}), 500
-
         data = request.get_json(silent=True) or {}
         prompt = data.get("message", "").strip()
 
@@ -114,30 +120,42 @@ def chat():
         scheme_name, scheme_data = find_scheme_info(prompt)
         if scheme_data:
             reply = f"👉 *{scheme_name}*\n\n"
-            reply += f"🌐 आधिकारिक लिंक: {scheme_data['link']}\n\n"
-            reply += f"📌 पात्रता: {scheme_data['eligibility']}\n\n"
-            reply += f"🎯 लाभ: {scheme_data['benefits']}\n\n"
-            reply += "📝 आवेदन की प्रक्रिया:\n"
+            reply += f"🌐 Official Link: {scheme_data['link']}\n\n"
+            reply += f"📌 Eligibility: {scheme_data['eligibility']}\n\n"
+            reply += f"🎯 Benefits: {scheme_data['benefits']}\n\n"
+            reply += "📝 Application Process:\n"
             for i, step in enumerate(scheme_data["steps"], 1):
                 reply += f"{i}. {step}\n"
 
             return jsonify({"reply": reply}), 200
 
-        # Step 2: LLM fallback
-        full_prompt = _build_prompt(prompt)
-        outputs = chatbot(
-            full_prompt,
-            max_length=GEN_MAX_LENGTH,
-            do_sample=GEN_DO_SAMPLE,
-            top_p=GEN_TOP_P,
-            temperature=GEN_TEMPERATURE,
-            num_return_sequences=1,
-            pad_token_id=None
-        )
-        raw_text = outputs[0].get("generated_text", "")
-        reply = _postprocess_generated(full_prompt, raw_text)
-
-        return jsonify({"reply": reply}), 200
+        # Step 2: OpenRouter LLM fallback
+        try:
+            from ai_services import get_scheme_info
+            result = get_scheme_info(prompt)
+            if result.get("success"):
+                return jsonify({"reply": result.get("reply", "No information found.")}), 200
+            else:
+                return jsonify({"reply": "Sorry, information is not available right now."}), 200
+        except Exception as llm_error:
+            logger.warning(f"OpenRouter LLM error: {llm_error}")
+            # Fallback to HuggingFace if available
+            if chatbot is not None:
+                full_prompt = _build_prompt(prompt)
+                outputs = chatbot(
+                    full_prompt,
+                    max_length=GEN_MAX_LENGTH,
+                    do_sample=GEN_DO_SAMPLE,
+                    top_p=GEN_TOP_P,
+                    temperature=GEN_TEMPERATURE,
+                    num_return_sequences=1,
+                    pad_token_id=None
+                )
+                raw_text = outputs[0].get("generated_text", "")
+                reply = _postprocess_generated(full_prompt, raw_text)
+                return jsonify({"reply": reply}), 200
+            else:
+                return jsonify({"reply": "Sorry, the chatbot is currently unavailable."}), 500
 
     except Exception as e:
         logger.exception("Chat error")
